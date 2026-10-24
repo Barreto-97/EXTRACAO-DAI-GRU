@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Download de DAI – GRU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#0a1428; --bg2:#0f1f3d; --card:rgba(255,255,255,.05); --line:rgba(255,255,255,.12);
+  --txt:#e8eefc; --mut:#93a3c4; --acc:#4da3ff; --ok:#3ddc97; --err:#ff6b6b;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(1200px 600px at 15% -10%,#17305f 0%,var(--bg) 60%) fixed;color:var(--txt);font-family:'DM Sans',system-ui,sans-serif;line-height:1.55}
+main{max-width:860px;margin:0 auto;padding:48px 20px 80px}
+h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(28px,5vw,40px);margin:0 0 6px;letter-spacing:-.02em}
+.sub{color:var(--mut);margin:0 0 32px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:18px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.card h2{font-family:'Syne',sans-serif;font-size:18px;margin:0 0 4px}
+.card p{margin:0 0 14px;color:var(--mut);font-size:14px}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:30px 16px;text-align:center;cursor:pointer;transition:.2s;color:var(--mut)}
+.drop:hover,.drop.over{border-color:var(--acc);background:rgba(77,163,255,.08);color:var(--txt)}
+.drop strong{color:var(--txt)}
+.btn{font-family:'DM Sans',sans-serif;font-weight:700;font-size:14px;border:0;border-radius:10px;padding:11px 18px;cursor:pointer;background:var(--acc);color:#04132b;text-decoration:none;display:inline-block}
+.btn:hover:not(:disabled){filter:brightness(1.1)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.msg{font-size:14px;margin-top:12px;min-height:20px}
+.msg.ok{color:var(--ok)} .msg.err{color:var(--err)}
+.tw{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-family:'DM Mono',monospace;font-size:12.5px}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:500}
+tr:last-child td{border-bottom:0}
+textarea{width:100%;height:150px;background:rgba(0,0,0,.35);color:#cfe0ff;border:1px solid var(--line);border-radius:10px;padding:12px;font-family:'DM Mono',monospace;font-size:11.5px;resize:vertical}
+ol.passos{margin:0;padding-left:20px;font-size:14.5px}
+ol.passos li{margin-bottom:8px}
+kbd{font-family:'DM Mono',monospace;font-size:12px;background:rgba(255,255,255,.1);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.nota{font-size:13px;color:var(--mut);border-left:3px solid var(--acc);padding-left:12px;margin-top:6px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>Download de DAI – GRU</h1>
+  <p class="sub">Baixa as guias DAI em PDF do portal da GRU a partir da sua planilha de DUIMPs. A planilha é lida no seu navegador e não é enviada a nenhum servidor.</p>
+
+  <section class="card">
+    <h2>1. Selecione a planilha</h2>
+    <p>Precisa ter as colunas <strong>REF DSV</strong> e <strong>NUMERO DUIMP</strong>. A leitura termina na primeira DUIMP vazia.</p>
+    <div class="drop" id="drop">
+      <strong>Clique ou arraste a planilha aqui</strong><br>.xlsx ou .xls
+      <input type="file" id="arquivo" accept=".xlsx,.xls" class="hidden">
+    </div>
+    <div class="msg" id="msgPlanilha"></div>
+    <div class="tw hidden" id="previewWrap">
+      <table id="preview"><thead><tr><th>#</th><th>REF DSV</th><th>DUIMP (sem hífen)</th><th>Arquivo</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. Copie o script</h2>
+    <p>O script já leva a lista de DUIMPs da sua planilha.</p>
+    <textarea id="script" readonly placeholder="O script aparece aqui depois que você selecionar a planilha."></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="btnCopiar" disabled>Copiar script</button>
+      <a class="btn ghost" href="https://www.tarifagru.com.br" target="_blank" rel="noopener">Abrir tarifagru.com.br</a>
+    </div>
+    <div class="msg" id="msgCopia"></div>
+  </section>
+
+  <section class="card">
+    <h2>3. Execute no portal da GRU</h2>
+    <ol class="passos">
+      <li>Abra o <strong>tarifagru.com.br</strong> em uma aba nova e faça o login normalmente.</li>
+      <li>Com o portal aberto e logado, pressione <kbd>F12</kbd> e vá na aba <strong>Console</strong>.</li>
+      <li>Cole o script e pressione <kbd>Enter</kbd>. Se o Chrome bloquear a colagem, digite <kbd>allow pasting</kbd>, pressione <kbd>Enter</kbd> e cole de novo.</li>
+      <li>Um painel de log aparece no canto da tela. Ao terminar, o navegador baixa um <strong>.zip</strong> com os PDFs (<em>REF_DAI.pdf</em>) e o arquivo <em>Log_Automacao_DAI.txt</em>.</li>
+    </ol>
+    <p class="nota">Por que assim? Uma página no GitHub Pages não consegue abrir o Chrome nem ler a sessão de outro site. Rodando o script dentro do portal já logado, as chamadas usam a sua própria sessão, sem precisar capturar cookies.</p>
+  </section>
+</main>
+
+<script>
+/* ============================================================
+   Script que roda DENTRO do tarifagru.com.br (via Console).
+   É convertido em texto com dai.toString() e recebe ITEMS.
+   ============================================================ */
+function dai(ITEMS) {
+  if (!/(^|\.)tarifagru\.com\.br$/i.test(location.hostname)) {
+    alert('Execute este script na aba do tarifagru.com.br, já logado.');
+    return;
+  }
+
+  var antigo = document.getElementById('dai-painel');
+  if (antigo) antigo.remove();
+
+  var painel = document.createElement('div');
+  painel.id = 'dai-painel';
+  painel.style.cssText = 'position:fixed;right:16px;bottom:16px;width:460px;max-width:92vw;z-index:2147483647;background:#0a1428;color:#e8eefc;border:1px solid #4da3ff;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:13px/1.5 Consolas,monospace;padding:12px';
+  var titulo = document.createElement('div');
+  titulo.style.cssText = 'font-weight:700;margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;align-items:center';
+  var tTexto = document.createElement('span');
+  tTexto.textContent = 'Automação GRU – Download de DAI';
+  var btnCancel = document.createElement('button');
+  btnCancel.textContent = 'Cancelar';
+  btnCancel.style.cssText = 'background:#ff6b6b;color:#fff;border:0;border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit';
+  titulo.appendChild(tTexto);
+  titulo.appendChild(btnCancel);
+  var pre = document.createElement('pre');
+  pre.style.cssText = 'margin:0;height:220px;overflow:auto;white-space:pre-wrap;background:rgba(0,0,0,.35);padding:8px;border-radius:8px';
+  painel.appendChild(titulo);
+  painel.appendChild(pre);
+  document.body.appendChild(painel);
+
+  var linhas = [];
+  function log(m) {
+    linhas.push(m);
+    pre.textContent += m + '\n';
+    pre.scrollTop = pre.scrollHeight;
+  }
+
+  var cancelado = false;
+  btnCancel.onclick = function () {
+    cancelado = true;
+    btnCancel.disabled = true;
+    log('Cancelando após a guia atual...');
+  };
+
+  /* ---- gerador de ZIP (sem compressão) ---- */
+  var enc = new TextEncoder();
+  var tabelaCrc = (function () {
+    var t = [];
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(b) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < b.length; i++) c = tabelaCrc[(c ^ b[i]) & 255] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function montarZip(arquivos) {
+    var d = new Date();
+    var hora = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    var data = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    var partes = [], central = [], offset = 0;
+    arquivos.forEach(function (f) {
+      var nome = enc.encode(f.nome), crc = crc32(f.dados), tam = f.dados.length;
+      var lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true);
+      lh.setUint16(4, 20, true);
+      lh.setUint16(6, 0x0800, true);
+      lh.setUint16(8, 0, true);
+      lh.setUint16(10, hora, true);
+      lh.setUint16(12, data, true);
+      lh.setUint32(14, crc, true);
+      lh.setUint32(18, tam, true);
+      lh.setUint32(22, tam, true);
+      lh.setUint16(26, nome.length, true);
+      lh.setUint16(28, 0, true);
+      partes.push(new Uint8Array(lh.buffer), nome, f.dados);
+      var ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0, 0x02014b50, true);
+      ch.setUint16(4, 20, true);
+      ch.setUint16(6, 20, true);
+      ch.setUint16(8, 0x0800, true);
+      ch.setUint16(10, 0, true);
+      ch.setUint16(12, hora, true);
+      ch.setUint16(14, data, true);
+      ch.setUint32(16, crc, true);
+      ch.setUint32(20, tam, true);
+      ch.setUint32(24, tam, true);
+      ch.setUint16(28, nome.length, true);
+      ch.setUint32(42, offset, true);
+      central.push(new Uint8Array(ch.buffer), nome);
+      offset += 30 + nome.length + tam;
+    });
+    var tamCentral = 0;
+    central.forEach(function (p) { tamCentral += p.length; });
+    var fim = new DataView(new ArrayBuffer(22));
+    fim.setUint32(0, 0x06054b50, true);
+    fim.setUint16(8, arquivos.length, true);
+    fim.setUint16(10, arquivos.length, true);
+    fim.setUint32(12, tamCentral, true);
+    fim.setUint32(16, offset, true);
+    return new Blob(partes.concat(central, [new Uint8Array(fim.buffer)]), { type: 'application/zip' });
+  }
+  function baixar(blob, nome) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  }
+
+  /* ---- chamadas ao portal (mesma origem: usa a sua sessão) ---- */
+  var BASE = location.origin + '/dbc7ec03-2cbb-407a-a91b-b7f60d379a78.gru-airport-pc-teca.brcomgrupctecacockpit/~03de271b-f3bb-411b-8f9c-1a5507233415~/';
+  var OPCOES = {
+    credentials: 'same-origin',
+    headers: {
+      'accept': 'application/json',
+      'accept-language': 'pt-BR',
+      'x-requested-with': 'XMLHttpRequest'
+    }
+  };
+
+  (async function () {
+    var sucessos = 0, falhas = 0;
+    var arquivos = [];
+    var usados = {};
+    log('=== INICIANDO AUTOMAÇÃO ===');
+    log('Total de DUIMPs: ' + ITEMS.length);
+
+    for (var i = 0; i < ITEMS.length; i++) {
+      if (cancelado) { log('\n[!] Automação cancelada pelo usuário.'); break; }
+      var it = ITEMS[i];
+      log('\nProcessando: ' + it.ref + ' | DUIMP: ' + it.duimp + '  (' + (i + 1) + '/' + ITEMS.length + ')');
+
+      try {
+        var urlBusca = BASE + "v2/gru/VIEW_PC_TECA_LIST?$skip=0&$top=50&$filter=substringof('" + it.duimp + "',LIBERATORY_DOCTO)";
+        var rBusca = await fetch(urlBusca, OPCOES);
+        if (!rBusca.ok) {
+          log('  -> [ERRO] Falha de conexão. O sistema derrubou a sessão.');
+          falhas++;
+          continue;
+        }
+        var jBusca = await rBusca.json();
+        var resultados = (jBusca.d && jBusca.d.results) || [];
+        if (!resultados.length) {
+          log('  -> [NÃO ENCONTRADO] Guia indisponível no sistema.');
+          falhas++;
+          continue;
+        }
+        var cid = resultados[0].ID;
+        if (!cid) {
+          log('  -> [ERRO] Falha ao gerar código interno da guia.');
+          falhas++;
+          continue;
+        }
+
+        var urlDown = BASE + "SAP_GATEWAY/sap/opu/odata/sap/ZGWNB_BOLETOS_SRV/HeaderSet?$filter=CID%20eq%20%27" + cid + "%27";
+        var rDown = await fetch(urlDown, OPCOES);
+        var jDown = await rDown.json();
+        var itensDown = (jDown.d && jDown.d.results) || [];
+        if (!itensDown.length) {
+          log('  -> [ERRO] SAP não liberou o arquivo PDF.');
+          falhas++;
+          continue;
+        }
+        var pdfB64 = itensDown[0].PDF;
+        if (!pdfB64) {
+          log('  -> [ERRO] Conteúdo do PDF veio corrompido ou vazio.');
+          falhas++;
+          continue;
+        }
+
+        var bin = atob(pdfB64);
+        var bytes = new Uint8Array(bin.length);
+        for (var j = 0; j < bin.length; j++) bytes[j] = bin.charCodeAt(j);
+
+        var base = String(it.ref).replace(/[\\\/:*?"<>|]/g, '_');
+        var nome = base + '_DAI.pdf';
+        if (usados[nome]) {
+          usados[base] = (usados[base] || 1) + 1;
+          nome = base + '_DAI_' + usados[base] + '.pdf';
+        }
+        usados[nome] = 1;
+        arquivos.push({ nome: nome, dados: bytes });
+
+        log('  -> [SUCESSO] ' + nome);
+        sucessos++;
+      } catch (e) {
+        log('  -> [ERRO] ' + e.message + ' (a sessão pode ter expirado; faça login de novo e rode outra vez)');
+        falhas++;
+      }
+    }
+
+    log('\n=== RESUMO FINAL ===\nDownloads bem-sucedidos: ' + sucessos + '\nFalhas/Não encontrados: ' + falhas);
+
+    if (arquivos.length) {
+      arquivos.push({ nome: 'Log_Automacao_DAI.txt', dados: enc.encode(linhas.join('\n')) });
+      baixar(montarZip(arquivos), 'Guias_DAI_Baixadas.zip');
+      log('\nZIP gerado: Guias_DAI_Baixadas.zip');
+    } else {
+      log('\nNenhum PDF foi baixado, então nenhum ZIP foi gerado.');
+    }
+    btnCancel.textContent = 'Fechar';
+    btnCancel.disabled = false;
+    btnCancel.style.background = '#4da3ff';
+    btnCancel.onclick = function () { painel.remove(); };
+  })();
+}
+
+/* ============================================================
+   Lado da página (GitHub Pages): leitura da planilha
+   ============================================================ */
+var itens = [];
+var $ = function (id) { return document.getElementById(id); };
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function norm(v) { return String(v === undefined || v === null ? '' : v).trim().toUpperCase(); }
+function setMsg(el, txt, tipo) { el.textContent = txt; el.className = 'msg ' + (tipo || ''); }
+
+async function lerPlanilha(file) {
+  var msg = $('msgPlanilha');
+  itens = [];
+  $('script').value = '';
+  $('btnCopiar').disabled = true;
+  $('previewWrap').classList.add('hidden');
+  setMsg($('msgCopia'), '');
+
+  try {
+    var buf = await file.arrayBuffer();
+    var wb = XLSX.read(buf, { type: 'array' });
+    var ws = wb.Sheets[wb.SheetNames[0]];
+    var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: true });
+
+    var idxCab = rows.findIndex(function (r) {
+      return r.some(function (c) { return norm(c) === 'REF DSV'; });
+    });
+    if (idxCab < 0) idxCab = 2;
+    var cab = (rows[idxCab] || []).map(norm);
+    var iRef = cab.indexOf('REF DSV');
+    var iDui = cab.indexOf('NUMERO DUIMP');
+
+    if (iDui < 0 || iRef < 0) {
+      setMsg(msg, 'Não encontrei as colunas "REF DSV" e "NUMERO DUIMP" na planilha. Confira os nomes dos cabeçalhos.', 'err');
+      return;
+    }
+
+    for (var i = idxCab + 1; i < rows.length; i++) {
+      var r = rows[i];
+      var original = String(r[iDui] === undefined || r[iDui] === null ? '' : r[iDui]).trim();
+      if (!original || original.toLowerCase() === 'nan') break;
+      itens.push({
+        ref: String(r[iRef] === undefined || r[iRef] === null ? '' : r[iRef]).trim(),
+        duimp: original.replace(/-/g, '')
+      });
+    }
+
+    if (!itens.length) {
+      setMsg(msg, 'Nenhuma DUIMP encontrada abaixo do cabeçalho.', 'err');
+      return;
+    }
+
+    var tb = $('preview').querySelector('tbody');
+    tb.innerHTML = itens.slice(0, 8).map(function (it, k) {
+      return '<tr><td>' + (k + 1) + '</td><td>' + esc(it.ref) + '</td><td>' + esc(it.duimp) + '</td><td>' + esc(it.ref) + '_DAI.pdf</td></tr>';
+    }).join('');
+    $('previewWrap').classList.remove('hidden');
+
+    $('script').value = '(' + dai.toString() + ')(' + JSON.stringify(itens) + ');';
+    $('btnCopiar').disabled = false;
+    setMsg(msg, file.name + ': ' + itens.length + ' DUIMP(s) prontas' + (itens.length > 8 ? ' (mostrando as 8 primeiras)' : '') + '.', 'ok');
+  } catch (e) {
+    setMsg(msg, 'Falha ao ler a planilha: ' + e.message, 'err');
+  }
+}
+
+var drop = $('drop'), input = $('arquivo');
+drop.addEventListener('click', function () { input.click(); });
+input.addEventListener('change', function () { if (input.files[0]) lerPlanilha(input.files[0]); });
+['dragenter', 'dragover'].forEach(function (ev) {
+  drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(function (ev) {
+  drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+});
+drop.addEventListener('drop', function (e) {
+  if (e.dataTransfer.files[0]) lerPlanilha(e.dataTransfer.files[0]);
+});
+
+$('btnCopiar').addEventListener('click', async function () {
+  var ta = $('script');
+  try {
+    await navigator.clipboard.writeText(ta.value);
+  } catch (e) {
+    ta.select();
+    document.execCommand('copy');
+  }
+  setMsg($('msgCopia'), 'Script copiado. Agora cole no Console do tarifagru.com.br (passo 3).', 'ok');
+});
+</script>
+</body>
+</html>
